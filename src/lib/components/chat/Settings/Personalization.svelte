@@ -15,9 +15,11 @@
 
 	// Addons
 	let enableMemory = false;
+	let alwaysOnKnowledgeBase = false;
 
 	onMount(async () => {
 		enableMemory = $settings?.memory ?? false;
+		alwaysOnKnowledgeBase = $settings?.alwaysOnKnowledgeBase ?? false;
 	});
 </script>
 
@@ -53,6 +55,37 @@
 						}}
 					/>
 				</div>
+			</div>
+		</div>
+
+		<div class="border-b border-gray-200 dark:border-gray-800 my-2.5"></div>
+
+		<div>
+			<div class="flex items-center justify-between mb-1">
+				<Tooltip
+					content={$i18n.t(
+						'This is an experimental feature, it may not function as expected and is subject to change at any time.'
+					)}
+				>
+					<div class="text-sm font-medium">
+						{$i18n.t('Always-on Knowledge Base')}
+						<span class=" text-xs text-gray-500">({$i18n.t('Experimental')})</span>
+					</div>
+				</Tooltip>
+
+				<div class="">
+					<Switch
+						bind:state={alwaysOnKnowledgeBase}
+						on:change={async () => {
+							saveSettings({ alwaysOnKnowledgeBase: alwaysOnKnowledgeBase });
+						}}
+					/>
+				</div>
+			</div>
+			<div class="text-xs text-gray-600 dark:text-gray-400">
+				{$i18n.t(
+					'This feature will automatically use your knowledge base as context for all your conversations.'
+				)}
 			</div>
 		</div>
 

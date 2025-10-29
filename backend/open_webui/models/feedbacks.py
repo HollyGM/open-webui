@@ -5,6 +5,8 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.chats import Chats
+from open_webui.pipelines.main import Pipeline
+from open_webui.config import RAG_EMBEDDING_ENGINE
 
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
@@ -113,8 +115,45 @@ class FeedbackTable:
                 db.add(result)
                 db.commit()
                 db.refresh(result)
+
                 if result:
-                    return FeedbackModel.model_validate(result)
+                    feedback_model = FeedbackModel.model_validate(result)
+
+                    # Handle conversation memory for positive feedback
+                    if (
+                        form_data.data
+                        and form_data.data.rating == 1
+                        and form_data.snapshot
+                        and form_data.snapshot.chat
+                        and form_data.meta
+                        and form_data.meta.get("message_id")
+                    ):
+                        chat_history = form_data.snapshot.chat["history"]
+                        message_id = form_data.meta["message_id"]
+
+                        if message_id in chat_history["messages"]:
+                            response_message = chat_history["messages"][message_id]
+                            user_message_id = response_message.get("parentId")
+
+                            if user_message_id and user_message_id in chat_history["messages"]:
+                                user_message = chat_history["messages"][user_message_id]
+
+                                conversation_text = f"User: {user_message['content']}\nAssistant: {response_message['content']}"
+                                collection_name = f"conversation_memory_{user_id}"
+
+                                log.info(f"Adding positive feedback to conversation memory: {collection_name}")
+
+                                # Use the RAG pipeline to process and store the text
+                                pipe = Pipeline(
+                                    "rag",
+                                    {"embedding_engine": RAG_EMBEDDING_ENGINE},
+                                )
+                                pipe.add_text(
+                                    text=conversation_text,
+                                    collection_name=collection_name,
+                                    metadata={"source": "feedback", "message_id": message_id},
+                                )
+                    return feedback_model
                 else:
                     return None
             except Exception as e:

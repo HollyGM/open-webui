@@ -479,6 +479,31 @@ def get_sources_from_items(
         f"items: {items} {queries} {embedding_function} {reranking_function} {full_context}"
     )
 
+    if user and user.settings:
+        # Check if RAG is already being used
+        is_rag_in_use = any(
+            item.get("type") in ["collection", "file", "text", "note"] for item in items
+        )
+
+        if not is_rag_in_use:
+            # Handle Always-on Knowledge Base
+            if user.settings.ui.get("alwaysOnKnowledgeBase", False):
+                log.debug("Always-on Knowledge Base is enabled, getting all user knowledge bases.")
+                user_knowledge_bases = Knowledges.get_knowledges_by_user_id(user.id)
+                for kb in user_knowledge_bases:
+                    items.append({"type": "collection", "id": kb.id, "legacy": False})
+
+            # Handle Conversation Memory
+            if user.settings.ui.get("memory", False):
+                log.debug("Conversation Memory is enabled, adding memory collection to items.")
+                items.append(
+                    {
+                        "type": "collection",
+                        "id": f"conversation_memory_{user.id}",
+                        "legacy": False,
+                    }
+                )
+
     extracted_collections = []
     query_results = []
 
