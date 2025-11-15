@@ -10,6 +10,7 @@
 	import html2canvas from 'html2canvas-pro';
 
 	import { downloadChatAsPDF } from '$lib/apis/utils';
+	import { uploadDoc } from '$lib/apis/documents';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 
 	import {
@@ -61,6 +62,19 @@
 		}, '');
 
 		return chatText.trim();
+	};
+
+	const getDocument = async () => {
+		const chatText = await getChatAsText();
+		const blob = new Blob([chatText], {
+			type: 'text/plain'
+		});
+
+		const file = new File([blob], `chat-${chat.chat.title}.txt`, {
+			type: 'text/plain'
+		});
+
+		return await uploadDoc(localStorage.token, file);
 	};
 
 	const downloadTxt = async () => {
@@ -402,6 +416,36 @@
 			>
 				<ArchiveBox className="size-4" strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Archive')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none w-full"
+				id="chat-copy-button"
+				on:click={async () => {
+					const res = await copyToClipboard(await getChatAsText()).catch((e) => {
+						console.error(e);
+					});
+
+					if (res) {
+						toast.success($i18n.t('Copied to clipboard'));
+					}
+				}}
+			>
+				<Clipboard className=" size-4" strokeWidth="1.5" />
+				<div class="flex items-center">{$i18n.t('Copy')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none w-full"
+				on:click={async () => {
+					const res = await getDocument();
+					if (res) {
+						toast.success($i18n.t('Document uploaded'));
+					}
+				}}
+			>
+				<Share className=" size-4" strokeWidth="1.5" />
+				<div class="flex items-center">{$i18n.t('Get Document')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Sub>
